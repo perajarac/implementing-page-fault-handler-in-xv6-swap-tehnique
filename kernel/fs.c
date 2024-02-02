@@ -63,7 +63,6 @@ bzero(int dev, int bno)
 // Allocate a zeroed disk block.
 // returns 0 if out of disk space.
 
-//laza
 static uint
 balloc(uint dev)
 {
