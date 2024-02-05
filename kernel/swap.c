@@ -2,6 +2,13 @@
 
 uint8 rw = 0;
 
+void initblockvector(){
+    (void)rw;
+    for(int i = 0;i<BLOCKS;i++){
+        blocks[i] = 0;
+    }
+}
+
 uint64 getVictim(){
     return 0;
 }
