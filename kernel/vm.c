@@ -15,6 +15,32 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
 
+uint32 pageFaultAlloc(struct proc* proc, uint64 va){
+
+    //TODO proveriti user i rwx bite
+    if (va >= process->sz || va < PGROUNDDOWN(process->trapframe->sp)) {
+        printf("usertrap(): va is higher than size or below the user stack pointer\n");
+        return -1;
+    }
+
+    char* mem;
+    if ((mem = kalloc()) == 0) {
+        printf("usertrap(): kalloc failed\n");
+        return -2;
+    }
+
+    //dovuci blok sa diska ako ga nema
+    uint64 virtualPageBase = PGROUNDDOWN(va);
+
+    if (mappages(process->pagetable, virtualPageBase, PGSIZE, (uint64)(mem), PTE_R|PTE_W|PTE_X|PTE_U) != 0) {
+        printf("usertrap(): mappages failed\n");
+        kfree(mem);
+        return -3;
+    }
+
+    return 0;
+}
+
 // Make a direct-map page table for the kernel.
 pagetable_t
 kvmmake(void)
@@ -116,12 +142,14 @@ walkaddr(pagetable_t pagetable, uint64 va)
     return 0;
 
   pte = walk(pagetable, va, 0);
-  if(pte == 0)
-    return 0;
-  if((*pte & PTE_V) == 0)
-    return 0;
-  if((*pte & PTE_U) == 0)
-    return 0;
+  struct proc* proc = myproc();
+    if(pte == 0) {
+            return 0;
+    }
+    if((*pte & PTE_V) == 0)
+            return 0;
+    if((*pte & PTE_U) == 0)
+            return 0;
   pa = PTE2PA(*pte);
   return pa;
 }
@@ -130,6 +158,7 @@ walkaddr(pagetable_t pagetable, uint64 va)
 // only used when booting.
 // does not flush TLB or enable paging.
 void
+
 kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
 {
   if(mappages(kpgtbl, va, sz, pa, perm) != 0)
