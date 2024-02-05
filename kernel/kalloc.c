@@ -1,14 +1,12 @@
 // Physical memory allocator, for user processes,
 // kernel stacks, page-table pages,
 // and pipe buffers. Allocates whole 4096-byte pages.
-
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
 #include "spinlock.h"
 #include "riscv.h"
 #include "defs.h"
-#include "swap.h"
 
 void freerange(void *pa_start, void *pa_end);
 
@@ -76,7 +74,7 @@ kalloc(void)
   if(r)
     kmem.freelist = r->next;
 
-  if(!r) r = getVictim();
+  //if(!r) r = getVictim();
   release(&kmem.lock);
 
   if(r)

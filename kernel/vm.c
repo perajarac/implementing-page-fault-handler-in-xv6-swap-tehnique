@@ -5,8 +5,6 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
-#include "spinlock.h"
-#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -89,7 +87,6 @@ kvminithart()
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
-    struct proc* proc = myproc();
   if(va >= MAXVA)
     return 0;
 
@@ -104,11 +101,6 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
       *pte = PA2PTE(pagetable) | PTE_V;
     }
   }
-
-  if(proc->ref.page_table == 0){
-        proc->ref.page_table = &pagetable;
-  }
-
 
   return &pagetable[PX(0, va)];
 }
