@@ -16,6 +16,8 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 extern char trampoline[]; // trampoline.S
 
 uint32 pageFaultAlloc(struct proc* proc, uint64 va){
+
+    //TODO proveriti user i rwx bite
     if (va >= process->sz || va < PGROUNDDOWN(process->trapframe->sp)) {
         printf("usertrap(): va is higher than size or below the user stack pointer\n");
         return -1;
@@ -26,7 +28,8 @@ uint32 pageFaultAlloc(struct proc* proc, uint64 va){
         printf("usertrap(): kalloc failed\n");
         return -2;
     }
-    memset(mem, 0, PGSIZE);
+
+    //dovuci blok sa diska ako ga nema
     uint64 virtualPageBase = PGROUNDDOWN(va);
 
     if (mappages(process->pagetable, virtualPageBase, PGSIZE, (uint64)(mem), PTE_R|PTE_W|PTE_X|PTE_U) != 0) {
@@ -141,18 +144,12 @@ walkaddr(pagetable_t pagetable, uint64 va)
   pte = walk(pagetable, va, 0);
   struct proc* proc = myproc();
     if(pte == 0) {
-        if ((pa = pageFaultAlloc(proc, va)) != 0) {
             return 0;
-        }
     }
     if((*pte & PTE_V) == 0)
-        if ((pa = pageFaultAlloc(proc, va)) != 0) {
             return 0;
-        }
     if((*pte & PTE_U) == 0)
-        if ((pa = pageFaultAlloc(proc, va)) != 0) {
             return 0;
-        }
   pa = PTE2PA(*pte);
   return pa;
 }
