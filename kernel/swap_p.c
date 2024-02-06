@@ -17,14 +17,10 @@ void initblockvector(){
     }
 }
 
-uint64 getVictim(){
-    return 0;
-}
-
-uint32 pageFaultAlloc(struct proc* process, uint64 va){
+int pageFaultAlloc(struct proc* process, uint64 va){
 
     pte_t* page_entry = walk(process->pagetable, va,0);
-    if(!page_entry )return -3;
+    if(!page_entry)return -3;
     if((*page_entry & PTE_U) == 0) return -4;
 
 
@@ -65,7 +61,7 @@ int getBlock(){
             return i;
         }
     }
-    return -1;
+    return -1; //unvalid
 }
 
 void updateRefBits(){   //call it from timer interrupt
@@ -74,11 +70,24 @@ void updateRefBits(){   //call it from timer interrupt
 
         uint flags = PTE_FLAGS(*map[i].pte);
 
-        // map[i].refbits >> 1; //ignorisati u getVictim kernel stranice
+        map[i].refbits >>= 1; //ignorisati u getVictim kernel stranice
 
         if(flags & PTE_A){
             *map[i].pte &= 0xbf;
-            map[i].refbits |= 0x10000000;
+            map[i].refbits |= 0x80000000;
         }
     }
+}
+
+pte_t* getVictim(){
+    pte_t* victim = 0;
+    uint32 minimum = MAXINT;
+    for(int i = 0; i < 4096; i++){
+        if(map[i].pte == NULL) continue;
+        if(map[i].refbits < minimum){
+            minimum = map[i].refbits;
+            victim = map[i].pte;
+        }
+    }
+    return victim;
 }

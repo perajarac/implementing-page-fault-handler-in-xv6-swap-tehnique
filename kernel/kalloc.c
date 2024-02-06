@@ -7,6 +7,7 @@
 #include "spinlock.h"
 #include "riscv.h"
 #include "defs.h"
+#include "swap_p.h"
 
 void freerange(void *pa_start, void *pa_end);
 
@@ -74,7 +75,27 @@ kalloc(void)
   if(r)
     kmem.freelist = r->next;
 
-  //if(!r) r = getVictim();
+  if(!r) {
+      pte_t* victim = getVictim();
+      if(victim == NULL) {
+          release(&kmem.lock);
+          return 0;
+      }
+      r = (struct run*)PTE2PA(*victim);
+      *victim &= 0x3fe;
+      int block = getBlock()*4;
+      if(block == -1){
+          release(&kmem.lock);
+          return 0;
+      }
+      *victim |= (block << 9);
+      *victim |= PTE_UP;
+      rw = 1;
+      for(int i = 0; i < 4; i++) {
+          write_block(block++,(uchar*)((uint64)r+i*PGSIZE/4),1);
+      }
+      rw = 0;
+  }
   release(&kmem.lock);
 
   if(r)
