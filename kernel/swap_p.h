@@ -12,6 +12,7 @@
  extern uint8 rw;
 
 void initblockvector();
+int getBlock();
 
 
 uint32 pageFaultAlloc(struct proc* process, uint64 va);
