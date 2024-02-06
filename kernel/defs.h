@@ -196,3 +196,5 @@ void            read_block(int blockno, uchar* data, int busy_wait);
 
 #define VIRTIO0_ID 0
 #define VIRTIO1_ID 1
+
+pagetable_t proc_pagetable(struct proc *p);
