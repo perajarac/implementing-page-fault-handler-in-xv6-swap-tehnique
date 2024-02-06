@@ -8,6 +8,7 @@
 #include "swap_p.h"
 
 uint8 rw = 0;
+uint8 blocks[BLOCKS];
 
 void initblockvector(){
     (void)rw;
