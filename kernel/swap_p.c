@@ -9,9 +9,9 @@
 
 uint8 rw = 0;
 uint8 blocks[BLOCKS];
+indtpte map[4096];
 
 void initblockvector(){
-    (void)rw;
     for(int i = 0;i<BLOCKS;i++){
         blocks[i] = 0;
     }
@@ -40,10 +40,11 @@ uint32 pageFaultAlloc(struct proc* process, uint64 va){
     }
 
     rw = 1;
-    int first_block = getBlock();
+
+    int first_block = getBlock()*4;
     if(first_block == -1) return -5; //no free block on disk
     for(int i = 0; i<4 ;i++){
-        read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1); //ispraviti
+        read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1);
     }
 
     rw = 0;
@@ -53,24 +54,31 @@ uint32 pageFaultAlloc(struct proc* process, uint64 va){
     //posle ovoga u pte postavljamo flagove, to jest adresu i bitove, da prepisemo sve flegove sa diska, staivm v bit i dodam u evidenciju zauzete blokove
 
 
-
     return 0;
 }
 
 int getBlock(){
+
     for(int i = 0; i < BLOCKS;i++){
         if(blocks[i]==0){
-            if(i+3<BLOCKS){
-                if(blocks[i] == 0 && blocks[i+1] == 0 && blocks[i+2] == 0 && blocks[i+3] == 0){
-                    blocks[i] = 1;
-                    blocks[i+1] = 1;
-                    blocks[i+2] = 1;
-                    blocks[i+3] = 1;
-                    return i;
-                }
-            }
+            blocks[i] = 1;
+            return i;
         }
     }
     return -1;
 }
 
+void updateRefBits(){   //call it from timer interrupt
+    for(int i = 0;i<4096;i++){
+        if(map[i].pte == NULL) continue;
+
+        uint flags = PTE_FLAGS(*map[i].pte);
+
+        // map[i].refbits >> 1; //ignorisati u getVictim kernel stranice
+
+        if(flags & PTE_A){
+            *map[i].pte &= 0xbf;
+            map[i].refbits |= 0x10000000;
+        }
+    }
+}
