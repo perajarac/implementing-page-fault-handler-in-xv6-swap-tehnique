@@ -40,9 +40,10 @@ uint32 pageFaultAlloc(struct proc* process, uint64 va){
     }
 
     rw = 1;
-
+    int first_block = getBlock();
+    if(first_block == -1) return -5; //no free block on disk
     for(int i = 0; i<4 ;i++){
-        read_block(i,(uchar*)((uint64)mem+i*PGSIZE/4),1); //ispraviti
+        read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1); //ispraviti
     }
 
     rw = 0;
@@ -54,5 +55,22 @@ uint32 pageFaultAlloc(struct proc* process, uint64 va){
 
 
     return 0;
+}
+
+int getBlock(){
+    for(int i = 0; i < BLOCKS;i++){
+        if(blocks[i]==0){
+            if(i+3<BLOCKS){
+                if(blocks[i] == 0 && blocks[i+1] == 0 && blocks[i+2] == 0 && blocks[i+3] == 0){
+                    blocks[i] = 1;
+                    blocks[i+1] = 1;
+                    blocks[i+2] = 1;
+                    blocks[i+3] = 1;
+                    return i;
+                }
+            }
+        }
+    }
+    return -1;
 }
 
