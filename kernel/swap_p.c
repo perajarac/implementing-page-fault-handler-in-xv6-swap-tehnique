@@ -1,4 +1,11 @@
-#include "swap.h"
+#include "types.h"
+#include "riscv.h"
+#include "defs.h"
+#include "param.h"
+#include "memlayout.h"
+#include "spinlock.h"
+#include "proc.h"
+#include "swap_p.h"
 
 uint8 rw = 0;
 
@@ -15,7 +22,7 @@ uint64 getVictim(){
 
 uint32 pageFaultAlloc(struct proc* process, uint64 va){
 
-    pte_t* page_entry = walk(process->pagetable, va);
+    pte_t* page_entry = walk(process->pagetable, va,0);
     if(!page_entry )return -3;
     if((*page_entry & PTE_U) == 0) return -4;
 

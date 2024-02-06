@@ -4,8 +4,8 @@
 #include "riscv.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "swap_p.h"
 #include "defs.h"
-#include "swap.h"
 
 struct cpu cpus[NCPU];
 
@@ -502,7 +502,7 @@ sched(void)
 // Give up the CPU for one scheduling round.
 void yield(void){
 
-    if(rw == 1) return;
+    if(rw == 1) return; //odkomentarisati kad provalis sto
 
   struct proc *p = myproc();
   acquire(&p->lock);
