@@ -110,7 +110,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
 // or 0 if not mapped.
 // Can only be used to look up user pages.
 uint64
-walkaddr(pagetable_t pagetable, uint64 va)
+walkaddr(pagetable_t pagetable, uint64 va) //TODO uraditi handling ako je na disku dovuci ga
 {
   pte_t *pte;
   uint64 pa;
@@ -160,6 +160,14 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm, int
     if(*pte & PTE_V)
       panic("mappages: remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
+
+    if(mode == 0){
+        uint index = INDEX(pa);
+        map[index].refbits = 0x80000000;
+        map[index].pte = pte;
+        map[index].mode = 0;
+    }
+
     if(a == last)
       break;
     a += PGSIZE;
@@ -257,7 +265,7 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
 // need to be less than oldsz.  oldsz can be larger than the actual
 // process size.  Returns the new process size.
 uint64
-uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
+uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz) //TODO izmeniti ako je stranica na disku samo treba da oznacimo njene blokove na disku slobodnim
 {
   if(newsz >= oldsz)
     return oldsz;
@@ -307,7 +315,7 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
 int
-uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
+uvmcopy(pagetable_t old, pagetable_t new, uint64 sz) //TODO kopiranje stranica sa diska u proces dete ako je stranica na disku
 {
   pte_t *pte;
   uint64 pa, i;
