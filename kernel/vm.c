@@ -191,8 +191,13 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
-    if((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+    if((*pte & PTE_V) == 0){
+        if((*pte & PTE_UP) == 0) {
+            panic("uvmunmap: not on disk or in memmory");
+        }
+        freeBlock(*pte>>9);
+    }
+
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
@@ -265,7 +270,7 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
 // need to be less than oldsz.  oldsz can be larger than the actual
 // process size.  Returns the new process size.
 uint64
-uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz) //TODO izmeniti ako je stranica na disku samo treba da oznacimo njene blokove na disku slobodnim
+uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {
   if(newsz >= oldsz)
     return oldsz;
@@ -325,16 +330,34 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz) //TODO kopiranje stranica s
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+    if((*pte & PTE_V) == 0) {
+        if((*pte & PTE_UP) == 0){
+            panic("uvmcopy: page not present");
+        }
+        if ((mem = kalloc()) == 0) {
+            goto err;
+        }
+        rw = 1;
+        uint64 first_block = (*pte >> 9)<<2;
+
+        for(int i = 0; i<4 ;i++){
+            read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1);
+        }
+        rw = 0;
+        flags = PTE_FLAGS(*pte);
+        flags |= PTE_V;
+        goto con;
+    }
+
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
+    if((mem = kalloc()) == 0) {
+        goto err;
+    }
     memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
-      kfree(mem);
-      goto err;
+    con:if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
+        kfree(mem);
+        goto err;
     }
   }
   return 0;

@@ -82,13 +82,13 @@ kalloc(void)
           return 0;
       }
       r = (struct run*)PTE2PA(*victim);
-      *victim &= 0x3fe;
+      *victim &= 0x3fe; //V=0
       int block = getBlock()*4;
       if(block == -1){
           release(&kmem.lock);
           return 0;
       }
-      *victim |= (block << 9);
+      *victim |= ((block>>2)<< 9);
       *victim |= PTE_UP;
       rw = 1;
       for(int i = 0; i < 4; i++) {
