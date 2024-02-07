@@ -34,7 +34,6 @@ int pageFaultAlloc(struct proc* process, uint64 va){
         printf("usertrap(): kalloc failed\n");
         return -2;
     }
-
     rw = 1;
 
     int first_block = getBlock()*4;
@@ -42,14 +41,9 @@ int pageFaultAlloc(struct proc* process, uint64 va){
     for(int i = 0; i<4 ;i++){
         read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1);
     }
-
     rw = 0;
 
-    //mapiram velicinu diska, koliko celih page moze da stane i vodim evidenicju o slobodnim i zauzetim blokovima na osnovu toga mora kontinualno da bude alociarana
-
-    //posle ovoga u pte postavljamo flagove, to jest adresu i bitove, da prepisemo sve flegove sa diska, staivm v bit i dodam u evidenciju zauzete blokove
-
-
+    *page_entry  = (PA2PTE((uint64)mem) | PTE_FLAGS(*page_entry) | PTE_V) & (~PTE_UP);
     return 0;
 }
 
@@ -90,4 +84,8 @@ pte_t* getVictim(){
         }
     }
     return victim;
+}
+
+void freeBlock(uint64 index){
+    blocks[index] = 0;
 }
