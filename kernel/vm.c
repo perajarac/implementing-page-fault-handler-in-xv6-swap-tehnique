@@ -128,11 +128,13 @@ walkaddr(pagetable_t pagetable, uint64 va)
 
   if((*pte & PTE_V) == 0){
       if((*pte & PTE_UP) == 0)  return 0;
-      uint64 mem =readFromDisk(*pte >> 10);
-      if(mem == 0)return 0;
-      *pte = (PA2PTE(mem) | PTE_FLAGS(*pte));
-      *pte &= (~PTE_UP);
-      *pte |= PTE_V;
+      uint64 mem = readFromDisk(*pte >> 10);
+      if(mem == 0) return 0;
+      *pte &= 0x3ff;
+      *pte  |= (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V | PTE_A) & (~PTE_UP);
+      map[INDEX((uint64)mem)].pte = pte;
+      map[INDEX((uint64)mem)].refbits |= 0x80000000;
+      sfence_vma();
   }
 
 
@@ -347,17 +349,19 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       if (*pte & PTE_UP) {
           mem = (char*)readFromDisk(*pte >> 10);
           if(mem == 0)goto err;
-          flags = PTE_FLAGS(*pte);
-          flags &= (~PTE_UP);
-          flags |= PTE_V;
-      } else{
-          pa = PTE2PA(*pte);
-          flags = PTE_FLAGS(*pte);
-          if ((mem = kalloc()) == 0) {
-              goto err;
-          }
-        memmove(mem, (char*)pa, PGSIZE);
+          *pte &= 0x3ff;
+          *pte  |= (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V | PTE_A) & (~PTE_UP);
+          map[INDEX((uint64)mem)].pte = pte;
+          map[INDEX((uint64)mem)].refbits |= 0x80000000;
+          sfence_vma();
       }
+      pa = PTE2PA(*pte);
+      flags = PTE_FLAGS(*pte);
+      if ((mem = kalloc()) == 0) {
+          goto err;
+      }
+      memmove(mem, (char*)pa, PGSIZE);
+
 
       if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
           kfree(mem);

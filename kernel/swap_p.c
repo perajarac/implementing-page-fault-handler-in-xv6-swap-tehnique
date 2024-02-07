@@ -21,8 +21,6 @@ int pageFaultAlloc(struct proc* process, uint64 va){
 
     pte_t* page_entry = walk(process->pagetable, va,0);
     if(!page_entry || (PTE_FLAGS(*page_entry) & PTE_UP) == 0)return -3;
-    if((*page_entry & PTE_U) == 0) return -4;
-
 
     if (va >= process->sz || va < PGROUNDDOWN(process->trapframe->sp)) {
         printf("usertrap(): va is higher than size or below the user stack pointer\n");
@@ -35,8 +33,11 @@ int pageFaultAlloc(struct proc* process, uint64 va){
     uint64 mem = readFromDisk(first_block);
     if(mem == 0) return -1;
 
-    *page_entry  = (PA2PTE((uint64)mem) | PTE_FLAGS(*page_entry) | PTE_V) & (~PTE_UP);
-
+    *page_entry &= 0x3ff;
+    *page_entry  |= (PA2PTE((uint64)mem) | PTE_FLAGS(*page_entry) | PTE_V) & (~PTE_UP);
+    map[INDEX(mem)].pte = page_entry;
+    map[INDEX(mem)].refbits |= 0x80000000;
+    sfence_vma();
 
     return 0;
 }
@@ -92,12 +93,12 @@ uint64 readFromDisk(int block){
         return 0;
     }
     rw = 1;
-
-
     for(int i = 0; i<4 ;i++){
         read_block(4*first_block+i,(uchar*)((uint64)mem+i*PGSIZE/4),1);
     }
     rw = 0;
+
+    freeBlock(block);
 
     return (uint64)mem;
 }
