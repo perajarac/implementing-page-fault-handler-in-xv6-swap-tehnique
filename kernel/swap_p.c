@@ -20,7 +20,7 @@ void initblockvector(){
 int pageFaultAlloc(struct proc* process, uint64 va){
 
     pte_t* page_entry = walk(process->pagetable, va,0);
-    if(!page_entry)return -3;
+    if(!page_entry || (PTE_FLAGS(*page_entry) & PTE_UP) == 0)return -3;
     if((*page_entry & PTE_U) == 0) return -4;
 
 
@@ -57,7 +57,7 @@ void updateRefBits(){   //call it from timer interrupt
 
         uint flags = PTE_FLAGS(*map[i].pte);
 
-        map[i].refbits >>= 1;
+        if((flags & PTE_UP) == 0) map[i].refbits >>= 1;
 
         if(flags & PTE_A){
             *map[i].pte &= (~PTE_A);

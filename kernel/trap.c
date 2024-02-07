@@ -67,9 +67,10 @@ usertrap(void)
 
     syscall();
   } else if(r_scause() == 0xc || r_scause() == 0xd || r_scause() == 0xf){
-      if(pageFaultAlloc(myproc(),r_stval()) < 0){
+      uint64 va = r_stval();
+      if(pageFaultAlloc(myproc(),va) < 0){
           printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
-          printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+          printf("            sepc=%p stval=%p\n", r_sepc(), va);
           setkilled(p);
       }
   }else if((which_dev = devintr()) != 0){
