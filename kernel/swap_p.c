@@ -43,9 +43,7 @@ int pageFaultAlloc(struct proc* process, uint64 va){
     }
     rw = 0;
 
-    *page_entry = PA2PTE((uint64)mem);
-    *page_entry |= PTE_V;
-
+    *page_entry  = (PA2PTE((uint64)mem) | PTE_FLAGS(*page_entry) | PTE_V) & (~PTE_UP);
     return 0;
 }
 

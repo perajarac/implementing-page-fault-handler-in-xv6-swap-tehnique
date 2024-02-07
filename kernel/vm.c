@@ -320,7 +320,7 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
 int
-uvmcopy(pagetable_t old, pagetable_t new, uint64 sz) //TODO kopiranje stranica sa diska u proces dete ako je stranica na disku
+uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
   pte_t *pte;
   uint64 pa, i;
@@ -337,28 +337,33 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz) //TODO kopiranje stranica s
         if ((mem = kalloc()) == 0) {
             goto err;
         }
-        rw = 1;
         uint64 first_block = (*pte >> 9)<<2;
-
+        rw = 1;
         for(int i = 0; i<4 ;i++){
             read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1);
         }
         rw = 0;
-        flags = PTE_FLAGS(*pte);
-        flags |= PTE_V;
-        goto con;
-    }
+        flags = (PTE_FLAGS(*pte) | PTE_V);
+    }else{
 
-    pa = PTE2PA(*pte);
-    flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0) {
-        goto err;
+        pa = PTE2PA(*pte);
+        flags = PTE_FLAGS(*pte);
+        if ((mem = kalloc()) == 0) {
+            goto err;
+        }
     }
     memmove(mem, (char*)pa, PGSIZE);
-    con:if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
-        kfree(mem);
-        goto err;
-    }
+        if((flags & PTE_U) == 0){
+          if(mappages(new, i, PGSIZE, (uint64)mem, flags,1) != 0){
+              kfree(mem);
+              goto err;
+          }
+      }else{
+          if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
+              kfree(mem);
+              goto err;
+          }
+      }
   }
   return 0;
 
