@@ -330,41 +330,28 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0) {
-        if((*pte & PTE_UP) == 0){
-            panic("uvmcopy: page not present");
-        }
-        if ((mem = kalloc()) == 0) {
-            goto err;
-        }
-        uint64 first_block = (*pte >> 9)<<2;
-        rw = 1;
-        for(int i = 0; i<4 ;i++){
-            read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1);
-        }
-        rw = 0;
-        flags = (PTE_FLAGS(*pte) | PTE_V);
-    }else{
+    if((*pte & PTE_V) == 0 && (*pte & PTE_UP) == 0) {
+        panic("uvmcopy: page not present");
+    }
+    if ((*pte & PTE_UP)) {
+        readFromDisk(pte,0);
+    }
 
         pa = PTE2PA(*pte);
         flags = PTE_FLAGS(*pte);
         if ((mem = kalloc()) == 0) {
             goto err;
         }
-    }
+
     memmove(mem, (char*)pa, PGSIZE);
-        if((flags & PTE_U) == 0){
-          if(mappages(new, i, PGSIZE, (uint64)mem, flags,1) != 0){
-              kfree(mem);
-              goto err;
-          }
-      }else{
-          if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
-              kfree(mem);
-              goto err;
-          }
+
+      if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
+          kfree(mem);
+          goto err;
       }
+
   }
+
   return 0;
 
  err:
