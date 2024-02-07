@@ -31,3 +31,5 @@ int pageFaultAlloc(struct proc* process, uint64 va);
 void updateRefBits();
 
 void freeBlock(uint64 index);
+
+int readFromDisk(pte_t* pte, int);

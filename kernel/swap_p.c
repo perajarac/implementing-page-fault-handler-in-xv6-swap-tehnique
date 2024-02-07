@@ -28,22 +28,10 @@ int pageFaultAlloc(struct proc* process, uint64 va){
         printf("usertrap(): va is higher than size or below the user stack pointer\n");
         return -1;
     }
+    int first_block = getBlock();
+    if(first_block == -1) return -2;
+    if(readFromDisk(page_entry,first_block)<0) return -1;
 
-    char* mem;
-    if ((mem = kalloc()) == 0) {
-        printf("usertrap(): kalloc failed\n");
-        return -2;
-    }
-    rw = 1;
-
-    int first_block = getBlock()*4;
-    if(first_block == -1) return -5; //no free block on disk
-    for(int i = 0; i<4 ;i++){
-        read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1);
-    }
-    rw = 0;
-
-    *page_entry  = (PA2PTE((uint64)mem) | PTE_FLAGS(*page_entry) | PTE_V) & (~PTE_UP);
     return 0;
 }
 
@@ -88,4 +76,24 @@ pte_t* getVictim(){
 
 void freeBlock(uint64 index){
     blocks[index] = 0;
+}
+
+int readFromDisk(pte_t* pte, int block){
+    char* mem;
+    if ((mem = kalloc()) == 0) {
+        printf("usertrap(): kalloc failed\n");
+        return -1;
+    }
+    rw = 1;
+
+    int first_block = (*pte >> 9)<<2;
+    if(block!=0) first_block = block;
+    for(int i = 0; i<4 ;i++){
+        read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1);
+    }
+    rw = 0;
+
+    *pte  = (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V) & (~PTE_UP);
+
+    return 0;
 }
