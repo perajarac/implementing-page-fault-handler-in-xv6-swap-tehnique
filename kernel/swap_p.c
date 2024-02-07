@@ -28,15 +28,20 @@ int pageFaultAlloc(struct proc* process, uint64 va){
         printf("usertrap(): va is higher than size or below the user stack pointer\n");
         return -1;
     }
-    int first_block = getBlock();
+
+    int first_block = (*page_entry >> 10);
     if(first_block == -1) return -2;
-    if(readFromDisk(page_entry,first_block)<0) return -1;
+
+    uint64 mem = readFromDisk(first_block);
+    if(mem == 0) return -1;
+
+    *page_entry  = (PA2PTE((uint64)mem) | PTE_FLAGS(*page_entry) | PTE_V) & (~PTE_UP);
+
 
     return 0;
 }
 
 int getBlock(){
-
     for(int i = 0; i < BLOCKS;i++){
         if(blocks[i]==0){
             blocks[i] = 1;
@@ -52,10 +57,10 @@ void updateRefBits(){   //call it from timer interrupt
 
         uint flags = PTE_FLAGS(*map[i].pte);
 
-        map[i].refbits >>= 1; //ignorisati u getVictim kernel stranice
+        map[i].refbits >>= 1;
 
         if(flags & PTE_A){
-            *map[i].pte &= 0xbf;
+            *map[i].pte &= (~PTE_A);
             map[i].refbits |= 0x80000000;
         }
     }
@@ -72,28 +77,27 @@ pte_t* getVictim(){
         }
     }
     return victim;
+
 }
 
 void freeBlock(uint64 index){
     blocks[index] = 0;
 }
 
-int readFromDisk(pte_t* pte, int block){
+uint64 readFromDisk(int block){
     char* mem;
+    int first_block = block;
     if ((mem = kalloc()) == 0) {
         printf("usertrap(): kalloc failed\n");
-        return -1;
+        return 0;
     }
     rw = 1;
 
-    int first_block = (*pte >> 9)<<2;
-    if(block!=0) first_block = block;
+
     for(int i = 0; i<4 ;i++){
-        read_block(first_block++,(uchar*)((uint64)mem+i*PGSIZE/4),1);
+        read_block(4*first_block+i,(uchar*)((uint64)mem+i*PGSIZE/4),1);
     }
     rw = 0;
 
-    *pte  = (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V) & (~PTE_UP);
-
-    return 0;
+    return (uint64)mem;
 }

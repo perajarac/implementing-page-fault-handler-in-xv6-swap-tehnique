@@ -10,7 +10,7 @@
 typedef struct indtpte{   //mapiranje indeksa iz tabele referenciranja u pte
     uint32 refbits;
     pte_t* pte;
-    uint mode;
+    int mode;
 }indtpte;
 
 extern indtpte map[4096];
@@ -18,7 +18,6 @@ extern indtpte map[4096];
 extern uint8 blocks[BLOCKS];
 
 extern uint8 rw;
-
 
 void initblockvector();
 
@@ -32,4 +31,4 @@ void updateRefBits();
 
 void freeBlock(uint64 index);
 
-int readFromDisk(pte_t* pte, int);
+uint64 readFromDisk(int);
