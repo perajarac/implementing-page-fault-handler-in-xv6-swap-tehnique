@@ -172,6 +172,7 @@ kerneltrap()
 void
 clockintr()
 {
+    if(rw == 1) return;
   acquire(&tickslock);
   ticks++;
   if(ticks % 5 == 0){

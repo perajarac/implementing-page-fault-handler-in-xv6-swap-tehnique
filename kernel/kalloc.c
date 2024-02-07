@@ -89,10 +89,12 @@ kalloc(void)
           release(&kmem.lock);
           return 0;
       }
-      *victim &= 0x3ff;
-      *victim |= ((block<<10) | PTE_FLAGS(*victim)) & (~PTE_V);
+
+      *victim = ((block<<10) | PTE_FLAGS(*victim)) & (~PTE_V);
       *victim |= PTE_UP;
+
       rw = 1;
+      printf("sending: %d\n", block);
       for(int i = 0; i < 4; i++) {
           write_block(4*block+i,(uchar*)((uint64)r+i*(PGSIZE/4)),1);
       }
