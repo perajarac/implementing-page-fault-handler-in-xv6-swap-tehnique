@@ -344,7 +344,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       if ((*pte & PTE_V) == 0 && (*pte & PTE_UP) == 0) {
           panic("uvmcopy: page not psent");
       }
-      if ((*pte & PTE_UP)) {
+      if (*pte & PTE_UP) {
           mem = (char*)readFromDisk(*pte >> 10);
           if(mem == 0)goto err;
           flags = PTE_FLAGS(*pte);
@@ -359,7 +359,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
         memmove(mem, (char*)pa, PGSIZE);
       }
 
-      if(mappages(new, i, PGSIZE, (uint64)mem, flags,1) != 0){
+      if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
           kfree(mem);
           goto err;
       }

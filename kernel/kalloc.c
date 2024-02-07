@@ -52,14 +52,13 @@ kfree(void *pa)
       panic("kfree");
   }
 
-
-    uint64 index = INDEX((uint64)pa);
-    map[index].pte = 0;
-
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
   r = (struct run*)pa;
+
+  uint64 index = INDEX((uint64)pa);
+  map[index].pte = 0;
 
   acquire(&kmem.lock);
   r->next = kmem.freelist;
@@ -96,7 +95,7 @@ kalloc(void)
       *victim |= PTE_UP;
       rw = 1;
       for(int i = 0; i < 4; i++) {
-          write_block(4*block+i,(uchar*)((uint64)r+i*PGSIZE/4),1);
+          write_block(4*block+i,(uchar*)((uint64)r+i*(PGSIZE/4)),1);
       }
       rw = 0;
   }
