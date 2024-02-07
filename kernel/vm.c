@@ -110,7 +110,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
 // or 0 if not mapped.
 // Can only be used to look up user pages.
 uint64
-walkaddr(pagetable_t pagetable, uint64 va) //TODO uraditi handling ako je na disku dovuci ga
+walkaddr(pagetable_t pagetable, uint64 va)
 {
   pte_t *pte;
   uint64 pa;
@@ -121,10 +121,21 @@ walkaddr(pagetable_t pagetable, uint64 va) //TODO uraditi handling ako je na dis
   pte = walk(pagetable, va, 0);
   if(pte == 0)
     return 0;
-  if((*pte & PTE_V) == 0) //obrisati kad se ispise pagefaulthandler
-    return 0;
-  if((*pte & PTE_U) == 0)
-    return 0;
+
+  if((*pte & PTE_U) == 0) {
+      return 0;
+  }
+
+  if((*pte & PTE_V) == 0){
+      if((*pte & PTE_UP) == 0)  return 0;
+      uint64 mem =readFromDisk(*pte >> 9);
+      if(mem == 0)return 0;
+      *pte = (PA2PTE(mem) | PTE_FLAGS(*pte));
+      *pte &= (~PTE_UP);
+      *pte |= PTE_V;
+  }
+
+
   pa = PTE2PA(*pte);
   return pa;
 }
@@ -191,18 +202,18 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
-    if((*pte & PTE_V) == 0){
-        if((*pte & PTE_UP) == 0) {
-            panic("uvmunmap: not on disk or in memmory");
-        }
-        freeBlock(*pte>>9);
+    if((*pte & PTE_V) == 0 && (*pte & PTE_UP) == 0){
+        panic("uvmunmap: not on disk or in memmory");
     }
-
-    if(PTE_FLAGS(*pte) == PTE_V)
-      panic("uvmunmap: not a leaf");
-    if(do_free){
-      uint64 pa = PTE2PA(*pte);
-      kfree((void*)pa);
+    if((*pte & PTE_V) == 0) {
+        freeBlock(*pte>>9);
+    }else{
+        if(PTE_FLAGS(*pte) == PTE_V)
+          panic("uvmunmap: not a leaf");
+        if(do_free){
+          uint64 pa = PTE2PA(*pte);
+          kfree((void*)pa);
+        }
     }
     *pte = 0;
   }
@@ -327,33 +338,33 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   uint flags;
   char *mem;
 
-  for(i = 0; i < sz; i += PGSIZE){
-    if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0 && (*pte & PTE_UP) == 0) {
-        panic("uvmcopy: page not present");
-    }
-    if ((*pte & PTE_UP)) {
-        readFromDisk(pte,0);
-    }
+  for(i = 0; i < sz; i += PGSIZE) {
+      if ((pte = walk(old, i, 0)) == 0)
+          panic("uvmcopy: pte should exist");
+      if ((*pte & PTE_V) == 0 && (*pte & PTE_UP) == 0) {
+          panic("uvmcopy: page not psent");
+      }
+      if ((*pte & PTE_UP)) {
+          mem = (char*)readFromDisk(*pte >> 9);
+          if(mem == 0)goto err;
+          flags = PTE_FLAGS(*pte);
+          flags &= (~PTE_UP);
+      } else{
+          pa = PTE2PA(*pte);
+          flags = PTE_FLAGS(*pte);
+          if ((mem = kalloc()) == 0) {
+              goto err;
+          }
+        memmove(mem, (char*)pa, PGSIZE);
+      }
 
-        pa = PTE2PA(*pte);
-        flags = PTE_FLAGS(*pte);
-        if ((mem = kalloc()) == 0) {
-            goto err;
-        }
-
-    memmove(mem, (char*)pa, PGSIZE);
-
-      if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
+      if(mappages(new, i, PGSIZE, (uint64)mem, flags,1) != 0){
           kfree(mem);
           goto err;
       }
 
   }
-
   return 0;
-
  err:
   uvmunmap(new, 0, i / PGSIZE, 1);
   return -1;
@@ -370,6 +381,7 @@ uvmclear(pagetable_t pagetable, uint64 va)
   if(pte == 0)
     panic("uvmclear");
   *pte &= ~PTE_U;
+  map[INDEX(PTE2PA(*pte))].pte = 0;
 }
 
 // Copy from kernel to user.
