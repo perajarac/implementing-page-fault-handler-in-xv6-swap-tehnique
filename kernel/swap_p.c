@@ -28,7 +28,7 @@ int pageFaultAlloc(struct proc* process, uint64 va){
         printf("usertrap(): va is higher than size or below the user stack pointer\n");
         return -1;
     }
-    int first_block = (*page_entry >> 9);
+    int first_block = (*page_entry >> 10);
     if(first_block == -1) return -2;
 
     uint64 mem = readFromDisk(first_block);

@@ -128,7 +128,7 @@ walkaddr(pagetable_t pagetable, uint64 va)
 
   if((*pte & PTE_V) == 0){
       if((*pte & PTE_UP) == 0)  return 0;
-      uint64 mem =readFromDisk(*pte >> 9);
+      uint64 mem =readFromDisk(*pte >> 10);
       if(mem == 0)return 0;
       *pte = (PA2PTE(mem) | PTE_FLAGS(*pte));
       *pte &= (~PTE_UP);
@@ -206,7 +206,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
         panic("uvmunmap: not on disk or in memmory");
     }
     if((*pte & PTE_V) == 0) {
-        freeBlock(*pte>>9);
+        freeBlock(*pte>>10);
     }else{
         if(PTE_FLAGS(*pte) == PTE_V)
           panic("uvmunmap: not a leaf");
@@ -345,7 +345,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
           panic("uvmcopy: page not psent");
       }
       if ((*pte & PTE_UP)) {
-          mem = (char*)readFromDisk(*pte >> 9);
+          mem = (char*)readFromDisk(*pte >> 10);
           if(mem == 0)goto err;
           flags = PTE_FLAGS(*pte);
           flags &= (~PTE_UP);

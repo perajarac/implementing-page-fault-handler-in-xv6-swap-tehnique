@@ -51,14 +51,16 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
+  uint64 index = INDEX((uint64)pa);
+  map[index].pte = 0;
+
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
   r = (struct run*)pa;
 
-    uint64 index = INDEX((uint64)pa);
-    map[index].pte = 0;
+
 
 
   acquire(&kmem.lock);
@@ -92,7 +94,7 @@ kalloc(void)
           release(&kmem.lock);
           return 0;
       }
-      *victim = ((block<<9) | PTE_FLAGS(*victim)) & (~PTE_V);
+      *victim = ((block<<10) | PTE_FLAGS(*victim)) & (~PTE_V);
       *victim |= PTE_UP;
       rw = 1;
       for(int i = 0; i < 4; i++) {
