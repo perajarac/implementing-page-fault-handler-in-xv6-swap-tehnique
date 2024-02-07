@@ -349,6 +349,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
           if(mem == 0)goto err;
           flags = PTE_FLAGS(*pte);
           flags &= (~PTE_UP);
+          flags |= PTE_V;
       } else{
           pa = PTE2PA(*pte);
           flags = PTE_FLAGS(*pte);

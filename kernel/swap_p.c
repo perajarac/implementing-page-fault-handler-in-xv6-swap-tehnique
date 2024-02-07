@@ -28,6 +28,7 @@ int pageFaultAlloc(struct proc* process, uint64 va){
         printf("usertrap(): va is higher than size or below the user stack pointer\n");
         return -1;
     }
+
     int first_block = (*page_entry >> 10);
     if(first_block == -1) return -2;
 
@@ -56,10 +57,10 @@ void updateRefBits(){   //call it from timer interrupt
 
         uint flags = PTE_FLAGS(*map[i].pte);
 
-        map[i].refbits >>= 1; //ignorisati u getVictim kernel stranice
+        map[i].refbits >>= 1;
 
         if(flags & PTE_A){
-            *map[i].pte &= 0xbf;
+            *map[i].pte &= (~PTE_A);
             map[i].refbits |= 0x80000000;
         }
     }
