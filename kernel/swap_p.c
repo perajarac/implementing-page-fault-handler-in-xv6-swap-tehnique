@@ -12,6 +12,11 @@ uint8 blocks[BLOCKS];
 indtpte map[4096];
 
 void initblockvector(){
+    for(int i = 0;i<4096;i++){
+        map[i].refbits = 0;
+        map[i].pte = 0;
+        map[i].mode = 0;
+    }
     for(int i = 0;i<BLOCKS;i++){
         blocks[i] = 0;
     }

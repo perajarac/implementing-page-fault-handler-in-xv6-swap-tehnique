@@ -77,11 +77,10 @@ kalloc(void)
   if(r) {
       kmem.freelist = r->next;
   }
-
   if(!r) {
       pte_t* victim = getVictim();
       if(victim == NULL) {
-          release(&kmhem.lock);
+          release(&kmem.lock);
           return 0;
       }
       r = (struct run*)PTE2PA(*victim);
@@ -106,8 +105,5 @@ kalloc(void)
   if(r){
     memset((char*)r, 5, PGSIZE); // fill with junk
   }
-
     return (void*)r;
-
-
 }
