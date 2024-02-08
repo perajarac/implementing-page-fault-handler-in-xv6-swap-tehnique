@@ -35,8 +35,15 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
-    kfree(p);
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE) {
+      uint64 index = INDEX((uint64)p);
+      if(map[index].pte){
+          map[index].refbits = 0;
+          map[index].pte = 0;
+          map[index].mode = 0;
+      }
+      kfree(p);
+  }
 }
 
 // Free the page of physical memory pointed at by pa,
@@ -77,11 +84,10 @@ kalloc(void)
   if(r) {
       kmem.freelist = r->next;
   }
-
   if(!r) {
       pte_t* victim = getVictim();
       if(victim == NULL) {
-          release(&kmhem.lock);
+          release(&kmem.lock);
           return 0;
       }
       r = (struct run*)PTE2PA(*victim);
@@ -90,24 +96,24 @@ kalloc(void)
           release(&kmem.lock);
           return 0;
       }
-      *victim &= 0x3ff;
-      *victim |= ((block<<10) | PTE_FLAGS(*victim)) & (~PTE_V);
+
+      *victim = ((block<<10) | PTE_FLAGS(*victim)) & (~PTE_V);
       *victim |= PTE_UP;
+
       rw = 1;
+      //printf("sending: %d\n", block);
       for(int i = 0; i < 4; i++) {
           write_block(4*block+i,(uchar*)((uint64)r+i*(PGSIZE/4)),1);
       }
       rw = 0;
+
       map[INDEX((uint64)r)].pte = 0;
       map[INDEX((uint64)r)].refbits = 0;
-      sfence_vma();
+      map[INDEX((uint64)r)].mode = 0;
   }
     release(&kmem.lock);
   if(r){
     memset((char*)r, 5, PGSIZE); // fill with junk
   }
-
     return (void*)r;
-
-
 }

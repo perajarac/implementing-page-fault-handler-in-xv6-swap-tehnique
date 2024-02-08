@@ -3,7 +3,6 @@
 #define NULL 0
 #define INDEX(pa) (((uint64)pa-(uint64)KERNB)/4096)
 #define MAXINT 0xffffffff
-
 #define TOTALMEM (PHYS-KERNB)
 #define BLOCKS (1<<12) //16MB swap space /  1024 B  2^24 / 2 ^ 10 / 2^2
 

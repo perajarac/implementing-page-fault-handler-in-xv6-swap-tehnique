@@ -130,11 +130,9 @@ walkaddr(pagetable_t pagetable, uint64 va)
       if((*pte & PTE_UP) == 0)  return 0;
       uint64 mem = readFromDisk(*pte >> 10);
       if(mem == 0) return 0;
-      *pte &= 0x3ff;
-      *pte  |= (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V | PTE_A) & (~PTE_UP);
+      *pte  = (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V | PTE_A) & (~PTE_UP);
       map[INDEX((uint64)mem)].pte = pte;
       map[INDEX((uint64)mem)].refbits |= 0x80000000;
-      sfence_vma();
   }
 
 
@@ -174,8 +172,8 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm, int
       panic("mappages: remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
 
+    uint64 index = INDEX(pa);
     if(mode == 0){
-        uint index = INDEX(pa);
         map[index].refbits = 0x80000000;
         map[index].pte = pte;
         map[index].mode = 0;
@@ -214,6 +212,11 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
           panic("uvmunmap: not a leaf");
         if(do_free){
           uint64 pa = PTE2PA(*pte);
+          if(map[INDEX(pa)].pte){
+              map[INDEX(pa)].pte = 0;
+              map[INDEX(pa)].refbits = 0;
+              map[INDEX(pa)].mode = 0;
+          }
           kfree((void*)pa);
         }
     }
@@ -349,21 +352,17 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       if (*pte & PTE_UP) {
           mem = (char*)readFromDisk(*pte >> 10);
           if(mem == 0)goto err;
-          *pte &= 0x3ff;
-          *pte  |= (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V | PTE_A) & (~PTE_UP);
-          map[INDEX((uint64)mem)].pte = pte;
-          map[INDEX((uint64)mem)].refbits |= 0x80000000;
-          sfence_vma();
+          flags = PTE_FLAGS(*pte) & (~PTE_UP);
+      }else{
+          pa = PTE2PA(*pte);
+          flags = PTE_FLAGS(*pte);
+          if ((mem = kalloc()) == 0) {
+              goto err;
+          }
+          memmove(mem, (char *) pa, PGSIZE);
       }
-      pa = PTE2PA(*pte);
-      flags = PTE_FLAGS(*pte);
-      if ((mem = kalloc()) == 0) {
-          goto err;
-      }
-      memmove(mem, (char*)pa, PGSIZE);
 
-
-      if(mappages(new, i, PGSIZE, (uint64)mem, flags,0) != 0){
+      if(mappages(new, i, PGSIZE, (uint64)mem, flags,1) != 0){
           kfree(mem);
           goto err;
       }
@@ -387,6 +386,7 @@ uvmclear(pagetable_t pagetable, uint64 va)
     panic("uvmclear");
   *pte &= ~PTE_U;
   map[INDEX(PTE2PA(*pte))].pte = 0;
+
 }
 
 // Copy from kernel to user.
