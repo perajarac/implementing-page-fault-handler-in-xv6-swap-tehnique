@@ -94,7 +94,7 @@ kalloc(void)
       *victim |= PTE_UP;
 
       rw = 1;
-      printf("sending: %d\n", block);
+      //printf("sending: %d\n", block);
       for(int i = 0; i < 4; i++) {
           write_block(4*block+i,(uchar*)((uint64)r+i*(PGSIZE/4)),1);
       }

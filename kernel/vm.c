@@ -173,8 +173,8 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm, int
       panic("mappages: remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
 
+    uint index = INDEX(pa);
     if(mode == 0){
-        uint index = INDEX(pa);
         map[index].refbits = 0x80000000;
         map[index].pte = pte;
         map[index].mode = 0;

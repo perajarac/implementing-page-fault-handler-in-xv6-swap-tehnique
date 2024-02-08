@@ -24,8 +24,18 @@ void initblockvector(){
 
 int pageFaultAlloc(struct proc* process, uint64 va){
 
+    if (va >= process->sz) {
+        printf("usertrap(): va is higher than size or below the user stack pointer\n");
+        return -1;
+    }
+
     pte_t* page_entry = walk(process->pagetable, va,0);
     if(!page_entry || (PTE_FLAGS(*page_entry) & PTE_UP) == 0 || (PTE_FLAGS(*page_entry) & PTE_U) == 0) return -3;
+
+    if(PTE_FLAGS(*page_entry) & PTE_V){return -2;}
+    /*uint64 pa = PTE2PA(*page_entry);
+    if(!pa || pa%PGSIZE || pa>=PHYSTOP) return -2;*/
+
 
     int first_block = (*page_entry >> 10);
 
@@ -90,7 +100,7 @@ uint64 readFromDisk(int block){
         return 0;
     }
     rw = 1;
-    printf("reciving: %d\n", block);
+    //printf("reciving: %d\n", block);
     for(int i = 0; i<4 ;i++){
         read_block(4*first_block+i,(uchar*)((uint64)mem+i*PGSIZE/4),1);
     }
