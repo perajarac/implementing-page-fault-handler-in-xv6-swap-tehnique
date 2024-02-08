@@ -24,7 +24,8 @@ void initblockvector(){
 
 int pageFaultAlloc(struct proc* process, uint64 va){
 
-    if (va >= process->sz) {
+
+    if (va >= MAXVA) {
         printf("usertrap(): va is higher than size or below the user stack pointer\n");
         return -1;
     }
@@ -46,7 +47,6 @@ int pageFaultAlloc(struct proc* process, uint64 va){
     map[INDEX(mem)].pte = page_entry;
     map[INDEX(mem)].refbits |= 0x80000000;
 
-    sfence_vma();
 
     return 0;
 }

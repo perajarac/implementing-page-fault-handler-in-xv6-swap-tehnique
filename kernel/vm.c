@@ -133,7 +133,6 @@ walkaddr(pagetable_t pagetable, uint64 va)
       *pte  = (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V | PTE_A) & (~PTE_UP);
       map[INDEX((uint64)mem)].pte = pte;
       map[INDEX((uint64)mem)].refbits |= 0x80000000;
-      sfence_vma();
   }
 
 
@@ -173,7 +172,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm, int
       panic("mappages: remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
 
-    uint index = INDEX(pa);
+    uint64 index = INDEX(pa);
     if(mode == 0){
         map[index].refbits = 0x80000000;
         map[index].pte = pte;
@@ -213,10 +212,11 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
           panic("uvmunmap: not a leaf");
         if(do_free){
           uint64 pa = PTE2PA(*pte);
-          //printf("%d \n",pa);
-          map[INDEX(pa)].pte = 0;
-          map[INDEX(pa)].refbits = 0;
-          map[INDEX(pa)].mode = 0;
+          if(map[INDEX(pa)].pte){
+              map[INDEX(pa)].pte = 0;
+              map[INDEX(pa)].refbits = 0;
+              map[INDEX(pa)].mode = 0;
+          }
           kfree((void*)pa);
         }
     }
@@ -353,7 +353,6 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
           mem = (char*)readFromDisk(*pte >> 10);
           if(mem == 0)goto err;
           flags = PTE_FLAGS(*pte) & (~PTE_UP);
-          sfence_vma();
       }else{
           pa = PTE2PA(*pte);
           flags = PTE_FLAGS(*pte);

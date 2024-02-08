@@ -35,8 +35,15 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
-    kfree(p);
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE) {
+      uint64 index = INDEX((uint64)p);
+      if(map[index].pte){
+          map[index].refbits = 0;
+          map[index].pte = 0;
+          map[index].mode = 0;
+      }
+      kfree(p);
+  }
 }
 
 // Free the page of physical memory pointed at by pa,
@@ -99,9 +106,10 @@ kalloc(void)
           write_block(4*block+i,(uchar*)((uint64)r+i*(PGSIZE/4)),1);
       }
       rw = 0;
+
       map[INDEX((uint64)r)].pte = 0;
       map[INDEX((uint64)r)].refbits = 0;
-      sfence_vma();
+      map[INDEX((uint64)r)].mode = 0;
   }
     release(&kmem.lock);
   if(r){
