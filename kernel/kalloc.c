@@ -36,12 +36,6 @@ freerange(void *pa_start, void *pa_end)
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
   for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE) {
-      uint64 index = INDEX((uint64)p);
-      if(map[index].pte){
-          map[index].refbits = 0;
-          map[index].pte = 0;
-          map[index].mode = 0;
-      }
       kfree(p);
   }
 }
@@ -61,9 +55,7 @@ kfree(void *pa)
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
-
   r = (struct run*)pa;
-
 
   acquire(&kmem.lock);
   r->next = kmem.freelist;
@@ -91,6 +83,8 @@ kalloc(void)
           return 0;
       }
       r = (struct run*)PTE2PA(*victim);
+
+      rw = 1;
       int block = getBlock();
       if(block == -1){
           release(&kmem.lock);
@@ -99,17 +93,14 @@ kalloc(void)
 
       *victim = ((block<<10) | PTE_FLAGS(*victim)) & (~PTE_V);
       *victim |= PTE_UP;
-
-      rw = 1;
-      //printf("sending: %d\n", block);
       for(int i = 0; i < 4; i++) {
-          write_block(4*block+i,(uchar*)((uint64)r+i*(PGSIZE/4)),1);
+          write_block(4*block+i,(uchar*)((uint64)r+i*PGSIZE/4),1);
       }
-      rw = 0;
-
       map[INDEX((uint64)r)].pte = 0;
       map[INDEX((uint64)r)].refbits = 0;
       map[INDEX((uint64)r)].mode = 0;
+      rw = 0;
+
   }
     release(&kmem.lock);
   if(r){

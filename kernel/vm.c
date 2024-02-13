@@ -130,7 +130,7 @@ walkaddr(pagetable_t pagetable, uint64 va)
       if((*pte & PTE_UP) == 0)  return 0;
       uint64 mem = readFromDisk(*pte >> 10);
       if(mem == 0) return 0;
-      *pte  = (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V | PTE_A) & (~PTE_UP);
+      *pte  = (PA2PTE((uint64)mem) | PTE_FLAGS(*pte) | PTE_V ) & (~PTE_UP);
       map[INDEX((uint64)mem)].pte = pte;
       map[INDEX((uint64)mem)].refbits |= 0x80000000;
   }
@@ -172,8 +172,8 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm, int
       panic("mappages: remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
 
-    uint64 index = INDEX(pa);
     if(mode == 0){
+        uint64 index = INDEX(pa);
         map[index].refbits = 0x80000000;
         map[index].pte = pte;
         map[index].mode = 0;
@@ -273,6 +273,10 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
     }
     memset(mem, 0, PGSIZE);
     if(mappages(pagetable, a, PGSIZE, (uint64)mem, PTE_R|PTE_U|xperm,0) != 0){
+        uint64 index = INDEX((uint64)mem);
+        map[index].refbits = 0;
+        map[index].pte = 0;
+        map[index].mode = 0;
       kfree(mem);
       uvmdealloc(pagetable, a, oldsz);
       return 0;
@@ -385,8 +389,6 @@ uvmclear(pagetable_t pagetable, uint64 va)
   if(pte == 0)
     panic("uvmclear");
   *pte &= ~PTE_U;
-  map[INDEX(PTE2PA(*pte))].pte = 0;
-
 }
 
 // Copy from kernel to user.
