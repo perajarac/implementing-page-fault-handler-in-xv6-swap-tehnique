@@ -7,6 +7,7 @@
 
 ### Introduction
 
+<html>
 <style>
 .fixed-width {
   display: inline-block;
@@ -15,6 +16,7 @@
   white-space: pre;
 }
 </style>
+</html>
 
 <p class = "fixed-width"> To record the virtual address space, the kernel of the operating system uses the hardware one
 support for page organization of virtual memory. The page table is organized into three
