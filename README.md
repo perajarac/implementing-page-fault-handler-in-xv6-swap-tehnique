@@ -14,6 +14,6 @@ operation, the system will be assigned one processor, physical memory of a fixed
 fixed size replacement disk. Multiple processes are executed in the system, so it is necessary to ensure
 adequate synchronization. The size of the virtual address is 39 bits, the size of the page is 4KB, while the
 block size on disk 1KB. In the page table for each page there are bits for access rights,
-a dirty bit, a referencing bit, and two bits that the software can use for its own purposes </p>
+a dirty bit, a referencing bit, and two bits that the software can use for its own purposes. </p>
 
 
