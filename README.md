@@ -6,7 +6,17 @@
 ## Page swaping
 
 ### Introduction
-<p align = "center"> To record the virtual address space, the kernel of the operating system uses the hardware one
+
+<style>
+.fixed-width {
+  display: inline-block;
+  width: 100%;
+  font-family: monospace;
+  white-space: pre;
+}
+</style>
+
+<p class = "fixed-width"> To record the virtual address space, the kernel of the operating system uses the hardware one
 support for page organization of virtual memory. The page table is organized into three
 level. The mapping method should be the same as in the xv6 operating system. At the beginning
 operation, the system will be assigned one processor, physical memory of a fixed size and space on
